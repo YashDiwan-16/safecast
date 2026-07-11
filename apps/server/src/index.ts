@@ -30,6 +30,7 @@ import { createRecoveryTools } from "./lib/tools/recovery-tools";
 import { createSafeCastTools } from "./lib/tools/safecast-tools";
 
 const app = new Hono();
+const apiRoutes = new Hono();
 
 app.use(logger());
 app.use(
@@ -51,7 +52,7 @@ const chatRequestSchema = z.object({
   location: z.string().optional().default(""),
 });
 
-app.post("/chat", async (c) => {
+apiRoutes.post("/chat", async (c) => {
   if (!isAiConfigured()) {
     return c.json({ error: getAiUnavailablePayload() }, 503);
   }
@@ -90,7 +91,7 @@ const broChatRequestSchema = z.object({
   profile: z.record(z.string(), z.unknown()).optional().default({}),
 });
 
-app.post("/bro-chat", async (c) => {
+apiRoutes.post("/bro-chat", async (c) => {
   if (!isAiConfigured()) {
     return c.json({ error: getAiUnavailablePayload() }, 503);
   }
@@ -133,7 +134,7 @@ const recoveryChatRequestSchema = z.object({
   profile: z.record(z.string(), z.unknown()).optional().default({}),
 });
 
-app.post("/recovery-chat", async (c) => {
+apiRoutes.post("/recovery-chat", async (c) => {
   if (!isAiConfigured()) {
     return c.json({ error: getAiUnavailablePayload() }, 503);
   }
@@ -181,27 +182,27 @@ app.post("/recovery-chat", async (c) => {
   });
 });
 
-app.get("/live-data", async (c) => {
+apiRoutes.get("/live-data", async (c) => {
   const location = c.req.query("location") ?? "";
   return c.json(await getLiveSafetyContext(location));
 });
 
-app.post("/preparedness", async (c) => {
+apiRoutes.post("/preparedness", async (c) => {
   const request = preparednessRequestSchema.parse(await c.req.json());
   return c.json(await runPreparednessEngine(request));
 });
 
-app.post("/advisor", async (c) => {
+apiRoutes.post("/advisor", async (c) => {
   const request = advisorRequestSchema.parse(await c.req.json());
   return c.json(await runAdvisorEngine(request));
 });
 
-app.post("/recovery", async (c) => {
+apiRoutes.post("/recovery", async (c) => {
   const request = recoveryRequestSchema.parse(await c.req.json());
   return c.json(await runRecoveryEngine(request));
 });
 
-app.use(
+apiRoutes.use(
   "/trpc/*",
   trpcServer({
     router: appRouter,
@@ -211,9 +212,18 @@ app.use(
   }),
 );
 
-app.get("/", (c) => {
+apiRoutes.get("/", (c) => {
   return c.text("OK");
 });
+
+app.get("/api", (c) => {
+  return c.text("OK");
+});
+app.get("/api/", (c) => {
+  return c.text("OK");
+});
+app.route("/", apiRoutes);
+app.route("/api", apiRoutes);
 
 const entrypoint = process.argv[1] ?? "";
 if (entrypoint.endsWith("src/index.ts") || entrypoint.endsWith("src/index.js")) {
