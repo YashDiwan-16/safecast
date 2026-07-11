@@ -2,7 +2,7 @@ import { cn } from "@safecast/ui/lib/utils";
 import * as React from "react";
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-lg border bg-card text-card-foreground shadow-sm", className)} {...props} />;
+  return <div className={cn("rounded-lg border bg-card text-card-foreground shadow-sm dark:shadow-none", className)} {...props} />;
 }
 
 export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {

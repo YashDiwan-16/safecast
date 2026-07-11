@@ -1,1 +1,11 @@
+@import "@fontsource-variable/inter";
 @import "@safecast/ui/globals.css";
+
+.bg-grid-fade {
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, black 40%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, black 40%, transparent 100%);
+}

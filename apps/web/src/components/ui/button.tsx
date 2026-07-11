@@ -2,7 +2,8 @@ import { cn } from "@safecast/ui/lib/utils";
 import * as React from "react";
 
 const variants = {
-  default: "bg-sky-600 text-white hover:bg-sky-500",
+  default: "bg-primary text-primary-foreground hover:bg-primary/90",
+  accent: "bg-sky-500 text-white hover:bg-sky-400",
   secondary: "bg-emerald-100 text-emerald-950 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-50 dark:hover:bg-emerald-900",
   outline: "border border-border bg-background hover:bg-muted",
   ghost: "hover:bg-muted",

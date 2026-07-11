@@ -2,7 +2,7 @@ import { cn } from "@safecast/ui/lib/utils";
 import * as React from "react";
 
 const badgeVariants = {
-  default: "border-transparent bg-sky-600 text-white",
+  default: "border-transparent bg-sky-500 text-white",
   secondary: "border-transparent bg-emerald-100 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-50",
   outline: "text-foreground",
   warning: "border-amber-300 bg-amber-100 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100",

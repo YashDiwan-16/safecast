@@ -1,11 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SafeCastApp } from "@/components/safecast/app";
+import { HomePage } from "@/components/safecast/home-page";
 
 export const Route = createFileRoute("/")({
-  component: HomeComponent,
+  component: HomePage,
 });
-
-function HomeComponent() {
-  return <SafeCastApp />;
-}

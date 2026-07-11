@@ -4,8 +4,11 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
+import Footer from "@/components/footer";
 import Header from "@/components/header";
 import { ThemeProvider } from "@/components/theme-provider";
+import { GlobalAssistant } from "@/components/safecast/global-assistant";
+import { SafeCastContextProvider } from "@/hooks/use-safecast-context";
 import type { trpc } from "@/utils/trpc";
 
 import "../index.css";
@@ -46,11 +49,15 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <div className="grid grid-rows-[auto_1fr] h-svh">
-          <Header />
-          <Outlet />
-        </div>
-        <Toaster richColors />
+        <SafeCastContextProvider>
+          <div className="grid min-h-svh grid-rows-[auto_1fr_auto]">
+            <Header />
+            <Outlet />
+            <Footer />
+          </div>
+          <GlobalAssistant />
+          <Toaster richColors />
+        </SafeCastContextProvider>
       </ThemeProvider>
       {import.meta.env.DEV ? (
         <>
