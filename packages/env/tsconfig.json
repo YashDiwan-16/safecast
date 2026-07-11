@@ -1,0 +1,3 @@
+{
+  "extends": "@safecast/config/tsconfig.base.json"
+}

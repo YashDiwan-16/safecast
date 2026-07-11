@@ -1,0 +1,25 @@
+{
+  "name": "@safecast/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@safecast/db": "workspace:*",
+    "@safecast/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "mongodb": "^7.4.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@safecast/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
