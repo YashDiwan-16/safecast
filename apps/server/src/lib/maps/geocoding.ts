@@ -13,6 +13,8 @@ const nominatimResultSchema = z
   )
   .default([]);
 
+export const OSM_USER_AGENT = "SafeCastAI/1.0 (live safety assistant)";
+
 export type GeoPoint = {
   name: string;
   latitude: number;
@@ -57,7 +59,7 @@ export async function geocodeLocation(location: string): Promise<LiveDataResult<
 
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "SafeCastAI/1.0 (live safety assistant)",
+        "User-Agent": OSM_USER_AGENT,
         Accept: "application/json",
       },
       signal: AbortSignal.timeout(10_000),

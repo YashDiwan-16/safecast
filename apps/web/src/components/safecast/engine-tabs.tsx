@@ -14,7 +14,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { postJson } from "@/lib/api";
 import type {
-  AdvisorOutput,
   EngineResponse,
   PreparednessOutput,
   RecoveryOutput,
@@ -22,6 +21,7 @@ import type {
 } from "@/lib/safecast-types";
 
 import { Markdown } from "./markdown";
+import { BroAssistant } from "./bro-assistant";
 
 const languages = ["English", "Hindi", "Bengali", "Tamil", "Telugu", "Marathi", "Gujarati", "Kannada"];
 
@@ -105,27 +105,6 @@ function PreparednessResult({ result }: { result?: EngineResponse<PreparednessOu
   );
 }
 
-function AdvisorResult({ result }: { result?: EngineResponse<AdvisorOutput> }) {
-  if (!result) return null;
-  if (result.ai.status === "unavailable") return <AiUnavailable reason={result.ai.reason} />;
-  const output = result.ai.output;
-
-  return (
-    <div className="grid gap-4">
-      <Alert variant={output.urgency === "seek_emergency_help" ? "destructive" : "warning"}>
-        <ShieldAlert className="mb-3 size-5" />
-        <AlertTitle>Urgency: {output.urgency.replaceAll("_", " ")}</AlertTitle>
-        <AlertDescription>{output.immediateAnswer}</AlertDescription>
-      </Alert>
-      <LiveDataStatus values={output.liveDataStatus} />
-      <ActionList actions={output.doNow} />
-      <Checklist title="Avoid" items={output.avoid} />
-      <Checklist title="Escalation signals" items={output.escalationSignals} />
-      <Checklist title="Verify locally" items={output.localInfoToVerify} />
-    </div>
-  );
-}
-
 function RecoveryResult({ result }: { result?: EngineResponse<RecoveryOutput> }) {
   if (!result) return null;
   if (result.ai.status === "unavailable") return <AiUnavailable reason={result.ai.reason} />;
@@ -191,8 +170,6 @@ export function EngineTabs({
   const [vehicleType, setVehicleType] = useState("");
   const [commutePattern, setCommutePattern] = useState("");
   const [emergencyContacts, setEmergencyContacts] = useState("");
-  const [situation, setSituation] = useState("");
-  const [waterLevel, setWaterLevel] = useState("");
   const [damage, setDamage] = useState("");
   const [utilitiesStatus, setUtilitiesStatus] = useState("");
   const [medicalNeeds, setMedicalNeeds] = useState("");
@@ -214,17 +191,6 @@ export function EngineTabs({
         vehicleType,
         commutePattern,
         emergencyContacts,
-      }),
-  });
-
-  const advisor = useMutation({
-    mutationFn: () =>
-      postJson<EngineResponse<AdvisorOutput>>("/advisor", {
-        location,
-        language,
-        situation,
-        indoors: true,
-        waterLevel,
       }),
   });
 
@@ -376,33 +342,7 @@ export function EngineTabs({
       </TabsContent>
 
       <TabsContent value="advisor">
-        <Card>
-          <CardHeader>
-            <CardTitle>During Monsoon /bro Safety Advisor</CardTitle>
-            <CardDescription>Explain what is happening right now and get immediate steps.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="situation">Current situation</Label>
-              <Textarea
-                id="situation"
-                value={situation}
-                onChange={(event) => setSituation(event.target.value)}
-                placeholder="Example: water is entering the lane, power is flickering, and I am on the ground floor."
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="water-level">Water level or nearby hazard</Label>
-              <Input id="water-level" value={waterLevel} onChange={(event) => setWaterLevel(event.target.value)} placeholder="ankle deep, knee deep, unknown..." />
-            </div>
-            <Button onClick={() => advisor.mutate()} disabled={advisor.isPending || !location.trim() || situation.trim().length < 5}>
-              <ShieldAlert className="size-4" />
-              Get live safety advice
-            </Button>
-            {advisor.isPending ? <LoadingResult /> : <AdvisorResult result={advisor.data} />}
-            {advisor.error ? <AiUnavailable reason={advisor.error.message} /> : null}
-          </CardContent>
-        </Card>
+        <BroAssistant location={location} language={language} />
       </TabsContent>
 
       <TabsContent value="recovery">

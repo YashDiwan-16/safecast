@@ -11,6 +11,7 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { z } from "zod";
 
+import { formatAiError } from "./lib/ai/errors";
 import { getAiUnavailablePayload, getGeminiModel, isAiConfigured } from "./lib/ai/model";
 import { baseSafetySystemPrompt } from "./lib/ai/prompts";
 import { getLiveSafetyContext } from "./lib/safety/live-context";
@@ -24,6 +25,7 @@ import {
   runPreparednessEngine,
   runRecoveryEngine,
 } from "./lib/safety/engines";
+import { createBroTools } from "./lib/tools/bro-tools";
 import { createSafeCastTools } from "./lib/tools/safecast-tools";
 
 const app = new Hono();
@@ -72,9 +74,55 @@ app.post("/chat", async (c) => {
     },
     stopWhen: stepCountIs(5),
     maxOutputTokens: 1600,
+    maxRetries: 0,
   });
 
-  return result.toUIMessageStreamResponse();
+  return result.toUIMessageStreamResponse({
+    onError: (error) => formatAiError(error),
+  });
+});
+
+const broChatRequestSchema = z.object({
+  messages: z.array(z.custom<UIMessage>()),
+  language: z.string().optional().default("auto-detect"),
+  location: z.string().optional().default(""),
+  profile: z.record(z.string(), z.unknown()).optional().default({}),
+});
+
+app.post("/bro-chat", async (c) => {
+  if (!isAiConfigured()) {
+    return c.json({ error: getAiUnavailablePayload() }, 503);
+  }
+
+  const body = broChatRequestSchema.parse(await c.req.json());
+  const system = [
+    "You are /bro, SafeCast AI's main real-time monsoon safety agent.",
+    "The user may type or speak in any supported language. Detect the user's language and answer in the same language unless they ask otherwise.",
+    "You must use tools before making live claims about weather, routes, emergency places, maps, traffic, or public alerts.",
+    "Never invent live conditions, road closures, shelters, hospitals, alerts, school-bus status, or traffic.",
+    "If route, map, traffic, weather, or news data is unavailable, say exactly what is unavailable and continue with cautious general safety guidance.",
+    "When route or commute decisions are requested, give a clear decision: go, delay, avoid, cancel, or verify locally.",
+    "When safety is urgent, include emergency steps, who to notify, and what to do next.",
+    "If origin/destination is missing for a route request, ask for it instead of guessing.",
+    body.location ? `Default user location: ${body.location}.` : "No default user location was provided.",
+    `User profile context: ${JSON.stringify(body.profile)}.`,
+    `Preferred language hint: ${body.language}.`,
+    `Current date: ${new Date().toISOString()}.`,
+  ].join("\n");
+
+  const result = streamText({
+    model: getGeminiModel(),
+    system,
+    messages: await convertToModelMessages(body.messages),
+    tools: createBroTools(),
+    stopWhen: stepCountIs(8),
+    maxOutputTokens: 1700,
+    maxRetries: 0,
+  });
+
+  return result.toUIMessageStreamResponse({
+    onError: (error) => formatAiError(error),
+  });
 });
 
 app.get("/live-data", async (c) => {

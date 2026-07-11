@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.91",
-    "@hono/node-server": "^1.19.6",
     "@hono/node-server": "^2.0.8",
     "@hono/trpc-server": "^0.4.2",
     "@safecast/api": "workspace:*",
