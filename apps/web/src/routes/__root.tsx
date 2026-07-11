@@ -19,13 +19,13 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
   head: () => ({
     meta: [
-      {
-        title: "safecast",
-      },
-      {
-        name: "description",
-        content: "safecast is a web application",
-      },
+          {
+            title: "SafeCast AI",
+          },
+          {
+            name: "description",
+            content: "Live monsoon safety assistant with AI, weather, maps, and public updates.",
+          },
     ],
     links: [
       {
@@ -52,8 +52,12 @@ function RootComponent() {
         </div>
         <Toaster richColors />
       </ThemeProvider>
-      <TanStackRouterDevtools position="bottom-left" />
-      <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+      {import.meta.env.DEV ? (
+        <>
+          <TanStackRouterDevtools position="bottom-left" />
+          <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+        </>
+      ) : null}
     </>
   );
 }

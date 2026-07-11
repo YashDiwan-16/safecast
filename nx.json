@@ -27,5 +27,6 @@
     "dev": {
       "cache": false
     }
-  }
+  },
+  "analytics": false
 }
