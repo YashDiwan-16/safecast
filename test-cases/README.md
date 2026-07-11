@@ -2,6 +2,28 @@
 
 This folder contains the current submission test cases for SafeCast AI. They are intentionally lightweight manual/API smoke tests so the repo stays small and no new test runner is required right before submission.
 
+## Executable Tests
+
+Run these from the repo root.
+
+```bash
+# Checks repo size and verifies ignored heavy/secret files are not tracked.
+./test-cases/repo-hygiene-tests.mjs
+
+# Requires the API server to be running at http://localhost:3000.
+./test-cases/api-smoke-tests.mjs
+
+# Runs both.
+./test-cases/run-all-tests.sh
+```
+
+Optional environment variables:
+
+```bash
+SAFECAST_API_URL=http://localhost:3000 ./test-cases/api-smoke-tests.mjs
+SAFECAST_MAX_REPO_BYTES=10485760 ./test-cases/repo-hygiene-tests.mjs
+```
+
 ## Current Implemented Surface
 
 | Area | Current implementation to test |
