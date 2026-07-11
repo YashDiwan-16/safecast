@@ -2,11 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   BellRing,
-  Bot,
   ClipboardList,
   Home,
   Info,
-  Languages,
   Map,
   MessageCircle,
   Radar,
@@ -14,9 +12,8 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sparkles,
-  Volume2,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -39,9 +36,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { getJson } from "@/lib/api";
 import type { LiveSafetyContext } from "@/lib/safecast-types";
 
-import { SafeCastAssistant } from "./assistant";
 import { EngineTabs } from "./engine-tabs";
 import { LiveDataPanel } from "./live-data-panel";
+import { SafeCastBot, SafeCastBotAvatar } from "./safe-cast-bot";
 
 const languages = ["English", "Hindi", "Bengali", "Tamil", "Telugu", "Marathi", "Gujarati", "Kannada"];
 
@@ -68,35 +65,6 @@ const entryCards = [
     badge: "Recovery assistant",
   },
 ] as const;
-
-function speakGuidance(language: string, location: string) {
-  if (!("speechSynthesis" in window)) return;
-
-  window.speechSynthesis.cancel();
-  const message = new SpeechSynthesisUtterance(
-    `Welcome to SafeCast AI. Set your location and language, then choose before, during, or after monsoon guidance. Live data will show unavailable instead of fake alerts.`,
-  );
-  message.lang =
-    language === "Hindi"
-      ? "hi-IN"
-      : language === "Bengali"
-        ? "bn-IN"
-        : language === "Tamil"
-          ? "ta-IN"
-          : language === "Telugu"
-            ? "te-IN"
-            : language === "Marathi"
-              ? "mr-IN"
-              : language === "Gujarati"
-                ? "gu-IN"
-                : language === "Kannada"
-                  ? "kn-IN"
-                  : "en-IN";
-  message.rate = 0.96;
-  message.pitch = 0.95;
-  message.text = `${message.text} Current location is ${location || "not set"}.`;
-  window.speechSynthesis.speak(message);
-}
 
 function EmergencyProfileDialog() {
   const [name, setName] = useState("");
@@ -172,31 +140,24 @@ function CompactAssistant({
   language: string;
   mode: string;
 }) {
+  const requestBody = useMemo(() => ({ location, language, mode }), [language, location, mode]);
+
   return (
     <Sheet>
       <div className="fixed bottom-4 right-4 z-40 flex max-w-[calc(100%-2rem)] items-center gap-2 rounded-xl border bg-background p-2 shadow-lg">
-        <button
-          type="button"
-          onClick={() => speakGuidance(language, location)}
-          className="relative grid size-11 place-items-center rounded-lg border bg-muted text-sky-700 focus:outline-none focus:ring-2 focus:ring-ring dark:text-sky-300"
-          aria-label="Hear SafeCast AI guidance"
-        >
-          <Bot className="size-5" />
-          <span className="absolute -right-1 -top-1 size-3 animate-pulse rounded-full bg-emerald-500" />
-        </button>
+        <SheetTrigger asChild>
+          <button
+            type="button"
+            className="rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+            aria-label="Open SafeCast AI assistant"
+          >
+            <SafeCastBotAvatar state="idle" size="sm" />
+          </button>
+        </SheetTrigger>
         <div className="hidden min-w-0 sm:block">
           <div className="text-sm font-medium">SafeCast assistant</div>
-          <div className="truncate text-xs text-muted-foreground">Tap bot for spoken guidance</div>
+          <div className="truncate text-xs text-muted-foreground">Open live AI guidance</div>
         </div>
-        <Button
-          type="button"
-          size="icon"
-          variant="outline"
-          onClick={() => speakGuidance(language, location)}
-          aria-label="Speak guidance"
-        >
-          <Volume2 className="size-4" />
-        </Button>
         <SheetTrigger asChild>
           <Button type="button" size="icon" aria-label="Open assistant panel">
             <MessageCircle className="size-4" />
@@ -208,7 +169,21 @@ function CompactAssistant({
           <SheetTitle>SafeCast AI Assistant</SheetTitle>
           <SheetDescription>Streaming safety chat with live weather, map, and public-update tools.</SheetDescription>
         </SheetHeader>
-        <SafeCastAssistant location={location} language={language} mode={mode} />
+        <SafeCastBot
+          api="/chat"
+          requestBody={requestBody}
+          title="SafeCast AI Assistant"
+          description="Ask for short guidance, then use voice to read the latest real backend response."
+          language={language}
+          placeholder="Ask SafeCast AI about preparation, live risk, route decisions, cleanup, or recovery..."
+          emptyState="Ask a question to get live AI guidance. Voice playback reads only the latest backend response."
+          examples={[
+            "What should I prepare before heavy rain?",
+            "What live risk should I check for my area?",
+            "What should I do after water entered my home?",
+          ]}
+          accent="sky"
+        />
       </SheetContent>
     </Sheet>
   );
