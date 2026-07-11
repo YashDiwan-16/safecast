@@ -13,39 +13,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { postJson } from "@/lib/api";
-import type {
-  EngineResponse,
-  PreparednessOutput,
-  RecoveryOutput,
-  SafetyAction,
-} from "@/lib/safecast-types";
+import type { EngineResponse, PreparednessOutput } from "@/lib/safecast-types";
 
 import { Markdown } from "./markdown";
 import { BroAssistant } from "./bro-assistant";
+import { RecoveryAssistant } from "./recovery-assistant";
 
 const languages = ["English", "Hindi", "Bengali", "Tamil", "Telugu", "Marathi", "Gujarati", "Kannada"];
-
-function priorityVariant(priority: SafetyAction["priority"]) {
-  if (priority === "critical") return "destructive";
-  if (priority === "high") return "warning";
-  return priority === "medium" ? "secondary" : "outline";
-}
-
-function ActionList({ actions }: { actions: SafetyAction[] }) {
-  return (
-    <div className="grid gap-3">
-      {actions.map((action) => (
-        <div key={`${action.title}-${action.detail}`} className="rounded-lg border p-3">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <div className="font-medium">{action.title}</div>
-            <Badge variant={priorityVariant(action.priority)}>{action.priority}</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">{action.detail}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function AiUnavailable({ reason }: { reason: string }) {
   return (
@@ -105,48 +79,6 @@ function PreparednessResult({ result }: { result?: EngineResponse<PreparednessOu
   );
 }
 
-function RecoveryResult({ result }: { result?: EngineResponse<RecoveryOutput> }) {
-  if (!result) return null;
-  if (result.ai.status === "unavailable") return <AiUnavailable reason={result.ai.reason} />;
-  const output = result.ai.output;
-
-  return (
-    <div className="grid gap-4">
-      <Alert variant={output.safetyStatus === "unsafe" ? "destructive" : "default"}>
-        <Home className="mb-3 size-5" />
-        <AlertTitle>Safety status: {output.safetyStatus.replaceAll("_", " ")}</AlertTitle>
-        <AlertDescription>{output.summary}</AlertDescription>
-      </Alert>
-      <LiveDataStatus values={output.liveDataStatus} />
-      <ActionList actions={output.firstSteps} />
-      <Checklist title="Documentation" items={output.documentation} />
-      <Checklist title="Sanitation" items={output.sanitation} />
-      <Checklist title="Services to contact" items={output.servicesToContact} />
-      <Checklist title="Next 48 hours" items={output.next48Hours} />
-    </div>
-  );
-}
-
-function Checklist({ title, items }: { title: string; items: string[] }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ul className="grid gap-2">
-          {items.map((item) => (
-            <li key={item} className="flex gap-2 text-sm">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" />
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
-  );
-}
-
 export function EngineTabs({
   location,
   language,
@@ -170,9 +102,6 @@ export function EngineTabs({
   const [vehicleType, setVehicleType] = useState("");
   const [commutePattern, setCommutePattern] = useState("");
   const [emergencyContacts, setEmergencyContacts] = useState("");
-  const [damage, setDamage] = useState("");
-  const [utilitiesStatus, setUtilitiesStatus] = useState("");
-  const [medicalNeeds, setMedicalNeeds] = useState("");
 
   const preparedness = useMutation({
     mutationFn: () =>
@@ -191,17 +120,6 @@ export function EngineTabs({
         vehicleType,
         commutePattern,
         emergencyContacts,
-      }),
-  });
-
-  const recovery = useMutation({
-    mutationFn: () =>
-      postJson<EngineResponse<RecoveryOutput>>("/recovery", {
-        location,
-        language,
-        damage,
-        utilitiesStatus,
-        medicalNeeds,
       }),
   });
 
@@ -346,39 +264,7 @@ export function EngineTabs({
       </TabsContent>
 
       <TabsContent value="recovery">
-        <Card>
-          <CardHeader>
-            <CardTitle>After Monsoon Recovery Assistant</CardTitle>
-            <CardDescription>Plan safe re-entry, cleanup, documentation, and next steps.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="damage">Observed damage</Label>
-              <Textarea
-                id="damage"
-                value={damage}
-                onChange={(event) => setDamage(event.target.value)}
-                placeholder="Describe flooding, damp walls, damaged appliances, debris, sewage, injuries..."
-              />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="utilities">Utilities status</Label>
-                <Input id="utilities" value={utilitiesStatus} onChange={(event) => setUtilitiesStatus(event.target.value)} placeholder="power/water/gas unknown" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="medical">Medical needs</Label>
-                <Input id="medical" value={medicalNeeds} onChange={(event) => setMedicalNeeds(event.target.value)} placeholder="none, first aid, medication..." />
-              </div>
-            </div>
-            <Button onClick={() => recovery.mutate()} disabled={recovery.isPending || !location.trim() || damage.trim().length < 5}>
-              <Home className="size-4" />
-              Build recovery plan
-            </Button>
-            {recovery.isPending ? <LoadingResult /> : <RecoveryResult result={recovery.data} />}
-            {recovery.error ? <AiUnavailable reason={recovery.error.message} /> : null}
-          </CardContent>
-        </Card>
+        <RecoveryAssistant location={location} language={language} />
       </TabsContent>
     </Tabs>
   );

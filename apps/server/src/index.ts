@@ -26,6 +26,7 @@ import {
   runRecoveryEngine,
 } from "./lib/safety/engines";
 import { createBroTools } from "./lib/tools/bro-tools";
+import { createRecoveryTools } from "./lib/tools/recovery-tools";
 import { createSafeCastTools } from "./lib/tools/safecast-tools";
 
 const app = new Hono();
@@ -117,6 +118,61 @@ app.post("/bro-chat", async (c) => {
     tools: createBroTools(),
     stopWhen: stepCountIs(8),
     maxOutputTokens: 1700,
+    maxRetries: 0,
+  });
+
+  return result.toUIMessageStreamResponse({
+    onError: (error) => formatAiError(error),
+  });
+});
+
+const recoveryChatRequestSchema = z.object({
+  messages: z.array(z.custom<UIMessage>()),
+  language: z.string().optional().default("auto-detect"),
+  location: z.string().optional().default(""),
+  profile: z.record(z.string(), z.unknown()).optional().default({}),
+});
+
+app.post("/recovery-chat", async (c) => {
+  if (!isAiConfigured()) {
+    return c.json({ error: getAiUnavailablePayload() }, 503);
+  }
+
+  const body = recoveryChatRequestSchema.parse(await c.req.json());
+  const system = [
+    "You are SafeCast AI's After Monsoon Recovery assistant.",
+    "The user may describe issues such as clogged drains, stagnant water, contaminated drinking water, fallen wires, damaged vehicle, water entered home, mosquito risk, spoiled food, wall cracks, or blocked road.",
+    "Detect the user's language and answer in the same language unless they ask otherwise.",
+    "Ask clarifying questions only if required for safety. If immediate danger is possible, give safety-first guidance before asking questions.",
+    "Use tools before making live claims about weather, nearby emergency places, public notices, blocked roads, or local recovery updates.",
+    "Never invent live conditions, road closures, official notices, phone numbers, authority names, emergency places, or disease outbreaks.",
+    "If weather, news/public updates, or emergency-place data is unavailable, say exactly what is unavailable and continue with cautious general recovery guidance.",
+    "Image upload and image-risk scanning are not implemented in this assistant. Do not ask for images and do not claim to inspect photos.",
+    "For every recovery guidance answer, render markdown with these sections:",
+    "- Immediate danger assessment.",
+    "- What not to touch/use.",
+    "- Cleaning and sanitation steps.",
+    "- Drinking water safety.",
+    "- Disease and mosquito prevention.",
+    "- Electrical hazard precautions.",
+    "- Damage documentation checklist.",
+    "- Local authority/community report draft.",
+    "- When to call emergency services.",
+    "- Follow-up reminders.",
+    "If the user has not provided enough detail for one section, state what is unknown rather than inventing details.",
+    body.location ? `Default user location: ${body.location}.` : "No default user location was provided.",
+    `User profile context: ${JSON.stringify(body.profile)}.`,
+    `Preferred language hint: ${body.language}.`,
+    `Current date: ${new Date().toISOString()}.`,
+  ].join("\n");
+
+  const result = streamText({
+    model: getGeminiModel(),
+    system,
+    messages: await convertToModelMessages(body.messages),
+    tools: createRecoveryTools(),
+    stopWhen: stepCountIs(6),
+    maxOutputTokens: 1800,
     maxRetries: 0,
   });
 
