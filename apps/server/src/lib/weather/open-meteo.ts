@@ -65,6 +65,15 @@ export type WeatherSnapshot = {
   }>;
 };
 
+export type ForecastRisk = {
+  status: "available";
+  level: "low" | "moderate" | "high" | "severe";
+  maxDailyRainMm: number;
+  maxPrecipitationProbabilityPercent: number;
+  maxGustKph: number;
+  reasons: string[];
+};
+
 function describeWeatherCode(code?: number) {
   if (code === undefined) return "Condition unavailable";
   if (code === 0) return "Clear";
@@ -146,4 +155,52 @@ export async function getWeatherForecast(point: GeoPoint): Promise<LiveDataResul
   } catch (error) {
     return unavailable("Open-Meteo", error instanceof Error ? error.message : "Weather is unavailable.");
   }
+}
+
+export function summarizeForecastRisk(weather: LiveDataResult<WeatherSnapshot>):
+  | ForecastRisk
+  | { status: "unavailable"; reason: string } {
+  if (weather.status === "unavailable") {
+    return { status: "unavailable", reason: weather.reason };
+  }
+
+  const maxDailyRainMm = Math.max(
+    0,
+    ...weather.data.daily.map((day) => day.precipitationMm ?? 0),
+  );
+  const maxPrecipitationProbabilityPercent = Math.max(
+    0,
+    ...weather.data.daily.map((day) => day.precipitationProbabilityPercent ?? 0),
+    ...weather.data.next24Hours.map((hour) => hour.precipitationProbabilityPercent ?? 0),
+  );
+  const maxGustKph = Math.max(0, ...weather.data.daily.map((day) => day.maxGustKph ?? 0));
+  const thunderstormExpected = weather.data.next24Hours.some((hour) =>
+    [95, 96, 99].includes(hour.weatherCode ?? -1),
+  );
+
+  const reasons: string[] = [];
+  if (maxDailyRainMm >= 50) reasons.push(`Peak daily rainfall forecast is ${maxDailyRainMm} mm.`);
+  if (maxPrecipitationProbabilityPercent >= 70) {
+    reasons.push(`Rain probability reaches ${maxPrecipitationProbabilityPercent}%.`);
+  }
+  if (maxGustKph >= 50) reasons.push(`Wind gusts may reach ${maxGustKph} km/h.`);
+  if (thunderstormExpected) reasons.push("Thunderstorm weather codes appear in the next 24 hours.");
+
+  let level: ForecastRisk["level"] = "low";
+  if (maxDailyRainMm >= 100 || maxGustKph >= 70 || thunderstormExpected) {
+    level = "severe";
+  } else if (maxDailyRainMm >= 50 || maxGustKph >= 50 || maxPrecipitationProbabilityPercent >= 80) {
+    level = "high";
+  } else if (maxDailyRainMm >= 20 || maxPrecipitationProbabilityPercent >= 55) {
+    level = "moderate";
+  }
+
+  return {
+    status: "available",
+    level,
+    maxDailyRainMm,
+    maxPrecipitationProbabilityPercent,
+    maxGustKph,
+    reasons: reasons.length > 0 ? reasons : ["No high rainfall or wind thresholds in the fetched forecast."],
+  };
 }

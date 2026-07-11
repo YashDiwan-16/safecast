@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +20,10 @@ import type {
   RecoveryOutput,
   SafetyAction,
 } from "@/lib/safecast-types";
+
+import { Markdown } from "./markdown";
+
+const languages = ["English", "Hindi", "Bengali", "Tamil", "Telugu", "Marathi", "Gujarati", "Kannada"];
 
 function priorityVariant(priority: SafetyAction["priority"]) {
   if (priority === "critical") return "destructive";
@@ -81,31 +86,21 @@ function PreparednessResult({ result }: { result?: EngineResponse<PreparednessOu
 
   return (
     <div className="grid gap-4">
-      <Alert>
+      <Alert variant={output.weatherContext === "without_live_weather_context" ? "warning" : "default"}>
         <CheckCircle2 className="mb-3 size-5" />
-        <AlertTitle>Risk level: {output.riskLevel}</AlertTitle>
-        <AlertDescription>{output.summary}</AlertDescription>
+        <AlertTitle>Readiness score: {Math.round(output.readinessScore)}/100</AlertTitle>
+        <AlertDescription>
+          {output.weatherContext === "with_live_weather_context"
+            ? "Generated with live Open-Meteo forecast context."
+            : "Generated without live weather context."}
+        </AlertDescription>
       </Alert>
       <LiveDataStatus values={output.liveDataStatus} />
-      <ActionList actions={output.actions} />
       <Card>
-        <CardHeader>
-          <CardTitle>Supplies</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-2">
-          {output.supplies.map((item) => (
-            <div key={`${item.item}-${item.quantity}`} className="flex flex-col gap-1 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="font-medium">{item.item}</div>
-                <div className="text-sm text-muted-foreground">{item.note}</div>
-              </div>
-              <Badge variant="secondary">{item.quantity}</Badge>
-            </div>
-          ))}
+        <CardContent className="p-5">
+          <Markdown>{output.markdown}</Markdown>
         </CardContent>
       </Card>
-      <Checklist title="Household plan" items={output.householdPlan} />
-      <Checklist title="Watch points" items={output.watchPoints} />
     </div>
   );
 }
@@ -182,9 +177,20 @@ export function EngineTabs({
   language: string;
   initialTab?: "preparedness" | "advisor" | "recovery";
 }) {
-  const [householdSize, setHouseholdSize] = useState("4");
-  const [homeType, setHomeType] = useState("apartment or house");
-  const [vulnerablePeople, setVulnerablePeople] = useState("");
+  const [prepLocation, setPrepLocation] = useState(location);
+  const [prepLanguage, setPrepLanguage] = useState(language);
+  const [houseType, setHouseType] = useState("apartment or house");
+  const [floorLevel, setFloorLevel] = useState("ground floor");
+  const [familyMembers, setFamilyMembers] = useState("4");
+  const [children, setChildren] = useState("");
+  const [elderly, setElderly] = useState("");
+  const [pregnant, setPregnant] = useState("");
+  const [disabledMembers, setDisabledMembers] = useState("");
+  const [prepMedicalNeeds, setPrepMedicalNeeds] = useState("");
+  const [pets, setPets] = useState("");
+  const [vehicleType, setVehicleType] = useState("");
+  const [commutePattern, setCommutePattern] = useState("");
+  const [emergencyContacts, setEmergencyContacts] = useState("");
   const [situation, setSituation] = useState("");
   const [waterLevel, setWaterLevel] = useState("");
   const [damage, setDamage] = useState("");
@@ -194,11 +200,20 @@ export function EngineTabs({
   const preparedness = useMutation({
     mutationFn: () =>
       postJson<EngineResponse<PreparednessOutput>>("/preparedness", {
-        location,
-        language,
-        householdSize: Number(householdSize),
-        homeType,
-        vulnerablePeople,
+        location: prepLocation,
+        language: prepLanguage,
+        houseType,
+        floorLevel,
+        familyMembers: Number(familyMembers),
+        children,
+        elderly,
+        pregnant,
+        disabledMembers,
+        medicalNeeds: prepMedicalNeeds,
+        pets,
+        vehicleType,
+        commutePattern,
+        emergencyContacts,
       }),
   });
 
@@ -245,24 +260,112 @@ export function EngineTabs({
         <Card>
           <CardHeader>
             <CardTitle>Before Monsoon Preparedness Engine</CardTitle>
-            <CardDescription>Generates a live-data-aware household readiness plan.</CardDescription>
+            <CardDescription>
+              Submit your household profile. Gemini uses this profile plus live forecast risk when available.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="household-size">Household size</Label>
-                <Input id="household-size" value={householdSize} onChange={(event) => setHouseholdSize(event.target.value)} inputMode="numeric" />
+                <Label htmlFor="prep-location">Location</Label>
+                <Input
+                  id="prep-location"
+                  value={prepLocation}
+                  onChange={(event) => setPrepLocation(event.target.value)}
+                  placeholder="City, district, neighborhood, or address"
+                />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="home-type">Home type</Label>
-                <Input id="home-type" value={homeType} onChange={(event) => setHomeType(event.target.value)} />
+                <Label>Language</Label>
+                <Select value={prepLanguage} onValueChange={setPrepLanguage}>
+                  <SelectTrigger aria-label="Preparedness language">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {languages.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="house-type">House type</Label>
+                <Input
+                  id="house-type"
+                  value={houseType}
+                  onChange={(event) => setHouseType(event.target.value)}
+                  placeholder="apartment, chawl, independent house..."
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="floor-level">Floor level</Label>
+                <Input
+                  id="floor-level"
+                  value={floorLevel}
+                  onChange={(event) => setFloorLevel(event.target.value)}
+                  placeholder="ground floor, 2nd floor, basement..."
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="family-members">Family members</Label>
+                <Input
+                  id="family-members"
+                  value={familyMembers}
+                  onChange={(event) => setFamilyMembers(event.target.value)}
+                  inputMode="numeric"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="vehicle-type">Vehicle type</Label>
+                <Input
+                  id="vehicle-type"
+                  value={vehicleType}
+                  onChange={(event) => setVehicleType(event.target.value)}
+                  placeholder="none, two-wheeler, car, EV..."
+                />
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="vulnerable">Vulnerable people, pets, or constraints</Label>
-              <Textarea id="vulnerable" value={vulnerablePeople} onChange={(event) => setVulnerablePeople(event.target.value)} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="children">Children</Label>
+                <Input id="children" value={children} onChange={(event) => setChildren(event.target.value)} placeholder="ages, count, school timing..." />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="elderly">Elderly members</Label>
+                <Input id="elderly" value={elderly} onChange={(event) => setElderly(event.target.value)} placeholder="ages, mobility, care needs..." />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="pregnant">Pregnant members</Label>
+                <Input id="pregnant" value={pregnant} onChange={(event) => setPregnant(event.target.value)} placeholder="trimester or needs, if any" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="disabled-members">Disabled members</Label>
+                <Input id="disabled-members" value={disabledMembers} onChange={(event) => setDisabledMembers(event.target.value)} placeholder="mobility, sensory, equipment needs..." />
+              </div>
             </div>
-            <Button onClick={() => preparedness.mutate()} disabled={preparedness.isPending || !location.trim()}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="prep-medical">Medical needs</Label>
+                <Textarea id="prep-medical" value={prepMedicalNeeds} onChange={(event) => setPrepMedicalNeeds(event.target.value)} placeholder="medicines, oxygen, dialysis, refrigerated medication..." />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="pets">Pets</Label>
+                <Textarea id="pets" value={pets} onChange={(event) => setPets(event.target.value)} placeholder="type, count, carriers, food needs..." />
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="commute">Commute pattern</Label>
+                <Textarea id="commute" value={commutePattern} onChange={(event) => setCommutePattern(event.target.value)} placeholder="daily route, train/bus/car, flood-prone roads, work shifts..." />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="contacts">Emergency contacts</Label>
+                <Textarea id="contacts" value={emergencyContacts} onChange={(event) => setEmergencyContacts(event.target.value)} placeholder="family, neighbor, doctor, building manager..." />
+              </div>
+            </div>
+            <Button onClick={() => preparedness.mutate()} disabled={preparedness.isPending || !prepLocation.trim()}>
               <Sparkles className="size-4" />
               Generate preparedness plan
             </Button>

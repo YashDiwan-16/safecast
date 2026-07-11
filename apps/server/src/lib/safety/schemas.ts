@@ -7,10 +7,18 @@ export const languageSchema = z
 export const preparednessRequestSchema = z.object({
   location: z.string().min(2),
   language: languageSchema,
-  householdSize: z.coerce.number().int().min(1).max(30).default(4),
-  homeType: z.string().min(2).max(80).default("residential home"),
-  vulnerablePeople: z.string().max(300).optional().default(""),
-  petsOrLivestock: z.string().max(300).optional().default(""),
+  houseType: z.string().min(2).max(100).default("residential home"),
+  floorLevel: z.string().min(1).max(80).default("unknown"),
+  familyMembers: z.coerce.number().int().min(1).max(50).default(4),
+  children: z.string().max(200).optional().default(""),
+  elderly: z.string().max(200).optional().default(""),
+  pregnant: z.string().max(200).optional().default(""),
+  disabledMembers: z.string().max(300).optional().default(""),
+  medicalNeeds: z.string().max(500).optional().default(""),
+  pets: z.string().max(300).optional().default(""),
+  vehicleType: z.string().max(160).optional().default(""),
+  commutePattern: z.string().max(500).optional().default(""),
+  emergencyContacts: z.string().max(800).optional().default(""),
 });
 
 export const advisorRequestSchema = z.object({
@@ -37,18 +45,9 @@ const actionSchema = z.object({
 
 export const preparednessOutputSchema = z.object({
   liveDataStatus: z.array(z.string()),
-  riskLevel: z.enum(["low", "moderate", "high", "severe", "unknown"]),
-  summary: z.string(),
-  actions: z.array(actionSchema).min(1),
-  supplies: z.array(
-    z.object({
-      item: z.string(),
-      quantity: z.string(),
-      note: z.string(),
-    }),
-  ),
-  householdPlan: z.array(z.string()),
-  watchPoints: z.array(z.string()),
+  weatherContext: z.enum(["with_live_weather_context", "without_live_weather_context"]),
+  readinessScore: z.number().min(0).max(100),
+  markdown: z.string().min(400),
 });
 
 export const advisorOutputSchema = z.object({

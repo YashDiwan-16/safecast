@@ -6,7 +6,9 @@ import UserMenu from "./user-menu";
 export default function Header() {
   const links = [
     { to: "/", label: "SafeCast AI" },
+    { to: "/before", label: "Before" },
     { to: "/bro", label: "/bro Advisor" },
+    { to: "/after", label: "After" },
     { to: "/dashboard", label: "Dashboard" },
   ] as const;
 

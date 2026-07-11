@@ -1,13 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
-import { Info, Menu, Radar, RefreshCw, ShieldCheck } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import {
+  BellRing,
+  Bot,
+  ClipboardList,
+  Home,
+  Info,
+  Languages,
+  Map,
+  MessageCircle,
+  Radar,
+  RefreshCw,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  Volume2,
+} from "lucide-react";
 import { useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -27,6 +44,175 @@ import { EngineTabs } from "./engine-tabs";
 import { LiveDataPanel } from "./live-data-panel";
 
 const languages = ["English", "Hindi", "Bengali", "Tamil", "Telugu", "Marathi", "Gujarati", "Kannada"];
+
+const entryCards = [
+  {
+    title: "Before Monsoon",
+    description: "Prepare household supplies, evacuation thresholds, documents, and watch points.",
+    to: "/before",
+    icon: ClipboardList,
+    badge: "Preparedness engine",
+  },
+  {
+    title: "During Monsoon /bro",
+    description: "Get immediate situation-aware safety guidance during flooding or severe rainfall.",
+    to: "/bro",
+    icon: ShieldAlert,
+    badge: "Live advisor",
+  },
+  {
+    title: "After Monsoon",
+    description: "Plan safe re-entry, cleanup, documentation, sanitation, and recovery steps.",
+    to: "/after",
+    icon: Home,
+    badge: "Recovery assistant",
+  },
+] as const;
+
+function speakGuidance(language: string, location: string) {
+  if (!("speechSynthesis" in window)) return;
+
+  window.speechSynthesis.cancel();
+  const message = new SpeechSynthesisUtterance(
+    `Welcome to SafeCast AI. Set your location and language, then choose before, during, or after monsoon guidance. Live data will show unavailable instead of fake alerts.`,
+  );
+  message.lang =
+    language === "Hindi"
+      ? "hi-IN"
+      : language === "Bengali"
+        ? "bn-IN"
+        : language === "Tamil"
+          ? "ta-IN"
+          : language === "Telugu"
+            ? "te-IN"
+            : language === "Marathi"
+              ? "mr-IN"
+              : language === "Gujarati"
+                ? "gu-IN"
+                : language === "Kannada"
+                  ? "kn-IN"
+                  : "en-IN";
+  message.rate = 0.96;
+  message.pitch = 0.95;
+  message.text = `${message.text} Current location is ${location || "not set"}.`;
+  window.speechSynthesis.speak(message);
+}
+
+function EmergencyProfileDialog() {
+  const [name, setName] = useState("");
+  const [contacts, setContacts] = useState("");
+  const [needs, setNeeds] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  function saveProfile() {
+    window.localStorage.setItem(
+      "safecast-emergency-profile",
+      JSON.stringify({ name, contacts, needs, savedAt: new Date().toISOString() }),
+    );
+    setSaved(true);
+  }
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <BellRing className="size-4" />
+          Emergency profile
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Emergency Profile Setup</DialogTitle>
+          <DialogDescription>
+            Store household context locally in this browser so you can reference it while using SafeCast AI.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="profile-name">Household or contact name</Label>
+            <Input id="profile-name" value={name} onChange={(event) => setName(event.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="profile-contacts">Emergency contacts</Label>
+            <Input
+              id="profile-contacts"
+              value={contacts}
+              onChange={(event) => setContacts(event.target.value)}
+              placeholder="Names and phone numbers"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="profile-needs">Access, medicine, mobility, pets, or other needs</Label>
+            <Input id="profile-needs" value={needs} onChange={(event) => setNeeds(event.target.value)} />
+          </div>
+          {saved ? (
+            <Alert>
+              <AlertTitle>Profile saved locally</AlertTitle>
+              <AlertDescription>No emergency profile data was sent to a server.</AlertDescription>
+            </Alert>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button variant="ghost">Close</Button>
+            </DialogClose>
+            <Button onClick={saveProfile}>Save profile</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CompactAssistant({
+  location,
+  language,
+  mode,
+}: {
+  location: string;
+  language: string;
+  mode: string;
+}) {
+  return (
+    <Sheet>
+      <div className="fixed bottom-4 right-4 z-40 flex max-w-[calc(100%-2rem)] items-center gap-2 rounded-xl border bg-background p-2 shadow-lg">
+        <button
+          type="button"
+          onClick={() => speakGuidance(language, location)}
+          className="relative grid size-11 place-items-center rounded-lg border bg-muted text-sky-700 focus:outline-none focus:ring-2 focus:ring-ring dark:text-sky-300"
+          aria-label="Hear SafeCast AI guidance"
+        >
+          <Bot className="size-5" />
+          <span className="absolute -right-1 -top-1 size-3 animate-pulse rounded-full bg-emerald-500" />
+        </button>
+        <div className="hidden min-w-0 sm:block">
+          <div className="text-sm font-medium">SafeCast assistant</div>
+          <div className="truncate text-xs text-muted-foreground">Tap bot for spoken guidance</div>
+        </div>
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          onClick={() => speakGuidance(language, location)}
+          aria-label="Speak guidance"
+        >
+          <Volume2 className="size-4" />
+        </Button>
+        <SheetTrigger asChild>
+          <Button type="button" size="icon" aria-label="Open assistant panel">
+            <MessageCircle className="size-4" />
+          </Button>
+        </SheetTrigger>
+      </div>
+      <SheetContent className="w-full max-w-md overflow-y-auto sm:w-[28rem]">
+        <SheetHeader className="mb-4">
+          <SheetTitle>SafeCast AI Assistant</SheetTitle>
+          <SheetDescription>Streaming safety chat with live weather, map, and public-update tools.</SheetDescription>
+        </SheetHeader>
+        <SafeCastAssistant location={location} language={language} mode={mode} />
+      </SheetContent>
+    </Sheet>
+  );
+}
 
 export function SafeCastApp({
   initialTab = "preparedness",
@@ -54,38 +240,36 @@ export function SafeCastApp({
   return (
     <TooltipProvider>
       <main className="min-h-full bg-background">
-        <section className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <section className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 pb-28">
           <div className="grid gap-6">
-            <div className="grid gap-5 rounded-xl border bg-background/90 p-5 shadow-sm backdrop-blur">
+            <div className="grid min-h-[calc(100svh-5rem)] content-start gap-5 rounded-xl border bg-background p-5 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="max-w-3xl">
+                <div className="max-w-4xl">
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <Badge variant="secondary">
                       <Radar className="size-3" />
-                      Live weather, maps, and public updates
+                      Real weather
                     </Badge>
-                    <Badge variant="outline">Gemini AI SDK v6</Badge>
+                    <Badge variant="outline">
+                      <Map className="size-3" />
+                      Real map intelligence
+                    </Badge>
+                    <Badge variant="outline">
+                      <Sparkles className="size-3" />
+                      Real AI reasoning
+                    </Badge>
                   </div>
-                  <h1 className="text-3xl font-semibold tracking-normal sm:text-5xl">SafeCast AI</h1>
+                  <h1 className="text-3xl font-semibold tracking-normal sm:text-5xl">
+                    SafeCast AI: multilingual monsoon safety intelligence before, during, and after
+                    severe weather.
+                  </h1>
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-                    A live monsoon safety workspace for preparing before rain, acting during flooding, and recovering after impact.
+                    A civic safety command surface for households and responders: live weather,
+                    live map context, grounded AI reasoning, multilingual support, and no fake
+                    alerts.
                   </p>
                 </div>
-                <div className="flex items-center gap-2 lg:hidden">
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <Button variant="outline" size="icon" aria-label="Open assistant">
-                        <Menu className="size-4" />
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent className="w-full max-w-md overflow-y-auto sm:w-[28rem]">
-                      <SheetHeader className="mb-4">
-                        <SheetTitle>SafeCast AI Assistant</SheetTitle>
-                        <SheetDescription>Streaming safety chat with live tools.</SheetDescription>
-                      </SheetHeader>
-                      <SafeCastAssistant location={submittedLocation} language={language} mode={mode} />
-                    </SheetContent>
-                  </Sheet>
+                <div className="flex items-center gap-2">
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button variant="ghost" size="icon" aria-label="Live data policy">
@@ -142,8 +326,52 @@ export function SafeCastApp({
                     </TooltipTrigger>
                     <TooltipContent>Fetches fresh map, weather, and public update data.</TooltipContent>
                   </Tooltip>
+                  <div className="md:col-span-3">
+                    <EmergencyProfileDialog />
+                  </div>
                 </CardContent>
               </Card>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                {entryCards.map((card) => {
+                  const Icon = card.icon;
+                  return (
+                    <Link key={card.to} to={card.to} className="group block focus:outline-none">
+                      <Card className="h-full transition-colors hover:border-sky-400 hover:bg-muted/40 focus-within:ring-2 focus-within:ring-ring">
+                        <CardHeader>
+                          <div className="mb-4 flex items-center justify-between gap-3">
+                            <div className="grid size-10 place-items-center rounded-lg border bg-background">
+                              <Icon className="size-5 text-sky-600 dark:text-sky-300" />
+                            </div>
+                            <Badge variant="outline">{card.badge}</Badge>
+                          </div>
+                          <CardTitle>{card.title}</CardTitle>
+                          <CardDescription>{card.description}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <span className="inline-flex h-10 w-full items-center justify-center rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white transition-colors group-hover:bg-sky-500">
+                            Open working flow
+                          </span>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  ["Weather", "Open-Meteo forecast and current conditions"],
+                  ["Maps", "OpenStreetMap/Nominatim location intelligence"],
+                  ["AI", "Gemini reasoning with live-data tools"],
+                  ["Integrity", "Unavailable states instead of fabricated alerts"],
+                ].map(([title, text]) => (
+                  <div key={title} className="rounded-lg border p-3">
+                    <div className="font-medium text-foreground">{title}</div>
+                    <div className="mt-1">{text}</div>
+                  </div>
+                ))}
+              </div>
 
               {live.error ? (
                 <Alert variant="warning">
@@ -156,29 +384,8 @@ export function SafeCastApp({
             <LiveDataPanel live={live.data} loading={live.isFetching} onRefresh={() => live.refetch()} />
             <EngineTabs location={submittedLocation} language={language} initialTab={initialTab} />
           </div>
-
-          <aside className="hidden lg:block">
-            <div className="sticky top-4">
-              <SafeCastAssistant location={submittedLocation} language={language} mode={mode} />
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="link" className="mt-3 px-0">
-                    <Info className="size-4" />
-                    Live data policy
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Live data policy</DialogTitle>
-                    <DialogDescription>
-                      Every panel either calls real APIs or shows an unavailable state. SafeCast AI never fabricates alerts, weather, map data, or public updates.
-                    </DialogDescription>
-                  </DialogHeader>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </aside>
         </section>
+        <CompactAssistant location={submittedLocation} language={language} mode={mode} />
       </main>
     </TooltipProvider>
   );

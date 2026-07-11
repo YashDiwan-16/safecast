@@ -3,6 +3,7 @@ import { generateText, Output } from "ai";
 import { getAiUnavailablePayload, getGeminiModel, isAiConfigured } from "../ai/model";
 import { baseSafetySystemPrompt, liveContextToPrompt } from "../ai/prompts";
 import { getLiveSafetyContext } from "./live-context";
+import { summarizeForecastRisk } from "../weather/open-meteo";
 import {
   advisorOutputSchema,
   preparednessOutputSchema,
@@ -76,13 +77,36 @@ export async function runPreparednessEngine(
   request: PreparednessRequest,
 ): Promise<EngineResult<PreparednessOutput>> {
   const live = await getLiveSafetyContext(request.location);
+  const forecastRisk = summarizeForecastRisk(live.weather);
   if (!isAiConfigured()) return unavailableEngineResult(live);
 
   try {
     const output = await structuredSafetyOutput<PreparednessOutput>({
       language: request.language,
-      task: "Create a before-monsoon preparedness plan for this household.",
-      userContext: request,
+      task: [
+        "Create a personalized BEFORE MONSOON preparedness plan.",
+        "The output markdown must include these sections:",
+        "- Readiness score.",
+        "- Priority actions.",
+        "- Emergency kit checklist.",
+        "- Home safety checklist.",
+        "- Medicine/document protection plan.",
+        "- Drainage and electricity precautions.",
+        "- Vehicle and travel preparation.",
+        "- Family-specific do's and don'ts.",
+        "- Do today.",
+        "- Do this week.",
+        "- Keep ready.",
+        "Do not invent official alerts or emergency contacts.",
+        "Do not use generic filler; tailor every checklist to the submitted profile.",
+        forecastRisk.status === "available"
+          ? "Use the provided live weather forecast risk context."
+          : "Live weather failed. The markdown must clearly state: Preparedness plan generated without live weather context.",
+      ].join("\n"),
+      userContext: {
+        submittedProfile: request,
+        forecastRisk,
+      },
       liveContext: live,
       schema: preparednessOutputSchema,
     });

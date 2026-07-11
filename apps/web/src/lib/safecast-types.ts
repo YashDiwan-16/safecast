@@ -61,12 +61,9 @@ export type SafetyAction = {
 
 export type PreparednessOutput = {
   liveDataStatus: string[];
-  riskLevel: "low" | "moderate" | "high" | "severe" | "unknown";
-  summary: string;
-  actions: SafetyAction[];
-  supplies: Array<{ item: string; quantity: string; note: string }>;
-  householdPlan: string[];
-  watchPoints: string[];
+  weatherContext: "with_live_weather_context" | "without_live_weather_context";
+  readinessScore: number;
+  markdown: string;
 };
 
 export type AdvisorOutput = {
